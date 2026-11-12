@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Meu Treino</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<meta name="theme-color" content="#f6f6f4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111111" media="(prefers-color-scheme: dark)">
+<style>
+:root{--bg:#f6f6f4;--card:#fff;--tx:#161616;--mu:#6b6b66;--ac:#d9480f;--on:#fff;--ln:#e2e2dc;--ok:#2b8a3e;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#111;--card:#1b1b1a;--tx:#f2f2ef;--mu:#a0a09a;--ac:#ff8a4c;--on:#111;--ln:#2e2e2b;--ok:#51cf66;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#111;--card:#1b1b1a;--tx:#f2f2ef;--mu:#a0a09a;--ac:#ff8a4c;--on:#111;--ln:#2e2e2b;--ok:#51cf66;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.4 system-ui,-apple-system,Roboto,sans-serif;padding:8px 14px 90px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+#v,h1{max-width:560px;margin-left:auto;margin-right:auto}
+h1{font-size:22px;margin-top:8px;margin-bottom:12px}
+.card{background:var(--card);border:1px solid var(--ln);border-radius:14px;padding:12px;margin-bottom:12px}
+.row{display:flex;gap:8px;align-items:center;margin:6px 0;justify-content:space-between}
+.mu{color:var(--mu)}.ln{color:var(--mu);font-size:14px;margin-top:4px}
+input{font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--ln);border-radius:8px;padding:8px;min-width:0;width:100%;box-sizing:border-box}
+textarea{font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--ln);border-radius:8px;padding:8px;width:100%;box-sizing:border-box;min-height:84px;margin-top:8px;resize:vertical}.note{margin-top:8px;padding:8px 10px;border-left:3px solid var(--ac);background:var(--bg);border-radius:6px;white-space:pre-wrap;font-size:14px}.nm{flex:1}.n{width:60px;flex:none}
+.set{display:grid;grid-template-columns:22px 1fr 1fr 46px;gap:8px;align-items:center;margin-top:8px}
+.ck{height:40px;border-radius:8px;border:1px solid var(--ln);background:var(--bg);color:var(--mu);font-size:18px}
+.ck.on{background:var(--ok);color:#fff;border-color:var(--ok)}
+.chips{display:flex;gap:8px;overflow-x:auto;margin-bottom:12px;padding-bottom:4px}
+.chip{flex:none;padding:8px 14px;border-radius:20px;border:1px solid var(--ln);background:var(--card);color:var(--tx);font:inherit}
+.chip.on{background:var(--ac);color:var(--on);border-color:var(--ac)}
+.pri{width:100%;padding:14px;border:0;border-radius:12px;background:var(--ac);color:var(--on);font:inherit;font-weight:700;margin-top:6px;margin-bottom:12px}
+.ghost{background:none;border:1px dashed var(--ln);color:var(--mu);border-radius:8px;padding:8px;width:100%;margin-top:6px;font:inherit}
+.x{background:none;border:0;font-size:18px;color:var(--mu);padding:6px;flex:none}
+nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--card);border-top:1px solid var(--ln);padding-bottom:env(safe-area-inset-bottom,0px);z-index:5}
+nav button{flex:1;background:none;border:0;padding:8px 0;font-size:20px;color:var(--mu);display:flex;flex-direction:column;align-items:center}
+nav button.on{color:var(--ac)}nav small{font-size:11px}
+#toast{position:fixed;left:50%;bottom:calc(76px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--tx);color:var(--bg);padding:8px 14px;border-radius:20px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:6;white-space:nowrap}
+#toast.on{opacity:1}
+</style></head><body>
+<h1 id="h"></h1><div id="v"></div><div id="toast"></div>
+<nav>
+<button data-t="t" onclick="go('t')">🏋️<small>Treino</small></button>
+<button data-t="p" onclick="go('p')">📋<small>Divisão</small></button>
+<button data-t="h" onclick="go('h')">📈<small>Histórico</small></button>
+</nav>
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let S={days:[],log:[],sess:{},cur:0},tab='t',ref=null,tm,tt;
+const T={t:'Treino de hoje',p:'Minha divisão',h:'Histórico'};
+function norm(){S.days=S.days||[];S.log=S.log||[];S.sess=S.sess||{};S.notes=S.notes||{};if(!S.days[S.cur])S.cur=0}
+function persist(){clearTimeout(tm);tm=setTimeout(async()=>{const j=JSON.stringify(S);try{localStorage.setItem('treino',j)}catch(e){}try{if(ref)await ref.set({s:j})}catch(e){}},400)}
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('on'),2200)}
+function go(t){tab=t;render()}
+function lastOf(n){for(const l of S.log)for(const e of l.ex)if(e.n==n&&e.s.length)return e.s;return null}
+function rows(di){const d=S.days[di];const a=S.sess[di]=S.sess[di]||[];d.ex.forEach((e,i)=>{const r=a[i]=a[i]||[];while(r.length<e.sets)r.push({w:'',r:'',d:0})});return a}
+function tpl(){S.days=[['A · Peito e tríceps',[['Supino reto',4,'8-10'],['Supino inclinado',3,'10'],['Crucifixo',3,'12'],['Tríceps corda',3,'12']]],['B · Costas e bíceps',[['Puxada frente',4,'10'],['Remada baixa',3,'10'],['Remada curvada',3,'10'],['Rosca direta',3,'12']]],['C · Pernas e ombro',[['Agachamento',4,'8-10'],['Leg press',3,'12'],['Cadeira extensora',3,'12'],['Desenvolvimento',3,'10']]]].map(([name,ex])=>({name,ex:ex.map(([n,sets,reps])=>({n,sets,reps}))}));S.cur=0;S.sess={};S.notes={};persist();render()}
+const emptyV='<div class="card"><p class="mu">Ainda sem divisão. Monta a tua do zero ou parte de um modelo ABC e ajusta.</p><button class="pri" onclick="tpl()">Carregar modelo ABC</button><button class="ghost" onclick="addDay()">Começar do zero</button></div>';
+function train(){
+ if(!S.days.length)return emptyV;
+ const d=S.days[S.cur];
+ let h='<div class="chips">'+S.days.map((x,i)=>`<button class="chip${i==S.cur?' on':''}" onclick="pick(${i})">${esc(x.name)}</button>`).join('')+'</div>';
+ if(!d.ex.length)return h+'<p class="mu">Esse dia tá vazio. Adiciona exercícios na aba Divisão.</p>';
+ const a=rows(S.cur);
+ h+=d.ex.map((e,i)=>{const l=lastOf(e.n)||[];
+  const r=a[i].slice(0,e.sets).map((s,j)=>`<div class="set"><span class="mu">${j+1}</span><input type="number" inputmode="decimal" placeholder="${l[j]?l[j][0]+' kg':'kg'}" value="${s.w}" oninput="rows(S.cur)[${i}][${j}].w=this.value;persist()"><input type="number" inputmode="numeric" placeholder="${l[j]?l[j][1]:esc(e.reps)}" value="${s.r}" oninput="rows(S.cur)[${i}][${j}].r=this.value;persist()"><button class="ck${s.d?' on':''}" onclick="ck(${i},${j})">✓</button></div>`).join('');
+  return `<div class="card"><b>${esc(e.n)}</b> <span class="mu">${e.sets}×${esc(e.reps)}</span>${r}</div>`}).join('');
+ return h+`<div class="card"><b>Anotações</b><textarea placeholder="Como foi o treino? Carga, dor, ajuste de máquina…" oninput="S.notes[S.cur]=this.value;persist()">${esc(S.notes[S.cur]||'')}</textarea></div>`+'<button class="pri" onclick="fin()">Finalizar treino</button>'
+}
+function ck(i,j){const r=rows(S.cur)[i][j];r.d=r.d?0:1;if(r.d){const l=lastOf(S.days[S.cur].ex[i].n);if(l&&l[j]){if(r.w==='')r.w=l[j][0];if(r.r==='')r.r=l[j][1]}}persist();render()}
+function fin(){const d=S.days[S.cur],a=rows(S.cur);const ex=d.ex.map((e,i)=>({n:e.n,s:a[i].slice(0,e.sets).filter(r=>r.d).map(r=>[+r.w||0,+r.r||0])})).filter(e=>e.s.length);
+ if(!ex.length){toast('Marca pelo menos uma série ✓');return}
+ S.log.unshift({t:Date.now(),d:d.name,ex,nt:(S.notes[S.cur]||'').trim()});delete S.sess[S.cur];delete S.notes[S.cur];persist();toast('Treino salvo, monstro 💪');tab='h';render()}
+function pick(i){S.cur=i;render()}
+function plan(){
+ let h=S.days.length?'':emptyV;
+ h+=S.days.map((d,i)=>`<div class="card"><div class="row"><input class="nm" value="${esc(d.name)}" oninput="S.days[${i}].name=this.value;persist()"><button class="x" onclick="rmDay(${i})">🗑</button></div>`+d.ex.map((e,j)=>`<div class="row"><input class="nm" value="${esc(e.n)}" oninput="S.days[${i}].ex[${j}].n=this.value;persist()"><input class="n" type="number" inputmode="numeric" value="${e.sets}" oninput="S.days[${i}].ex[${j}].sets=Math.max(1,+this.value||1);persist()"><span class="mu">×</span><input class="n" value="${esc(e.reps)}" oninput="S.days[${i}].ex[${j}].reps=this.value;persist()"><button class="x" onclick="rmEx(${i},${j})">✕</button></div>`).join('')+`<button class="ghost" onclick="addEx(${i})">+ exercício</button></div>`).join('');
+ return h+(S.days.length?'<button class="pri" onclick="addDay()">+ novo dia</button>':'')
+}
+function addDay(){S.days.push({name:'Novo treino',ex:[]});persist();render()}
+function rmDay(i){S.days.splice(i,1);S.sess={};S.notes={};S.cur=0;persist();render()}
+function addEx(i){S.days[i].ex.push({n:'Novo exercício',sets:3,reps:'10'});delete S.sess[i];persist();render()}
+function rmEx(i,j){S.days[i].ex.splice(j,1);delete S.sess[i];persist();render()}
+function hist(){
+ if(!S.log.length)return '<p class="mu">Nada por aqui ainda. Treina, finaliza e aparece.</p>';
+ return S.log.map((l,i)=>{const n=l.ex.reduce((a,e)=>a+e.s.length,0),v=l.ex.reduce((a,e)=>a+e.s.reduce((b,s)=>b+s[0]*s[1],0),0);
+  return `<div class="card"><div class="row"><b>${esc(l.d)}</b><span class="mu">${new Date(l.t).toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})}</span></div><div class="mu">${n} séries · ${Math.round(v)} kg de volume</div>`+l.ex.map(e=>`<div class="ln">${esc(e.n)}: ${e.s.map(s=>s[0]+'×'+s[1]).join(', ')}</div>`).join('')+`${l.nt?`<div class="note">${esc(l.nt)}</div>`:''}<button class="ghost" onclick="rmLog(${i})">apagar</button></div>`}).join('')
+}
+function rmLog(i){S.log.splice(i,1);persist();render()}
+function render(){
+ document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t==tab));
+ $('#h').textContent=T[tab];
+ $('#v').innerHTML=tab=='t'?train():tab=='p'?plan():hist()
+}
+async function init(){
+ try{const j=localStorage.getItem('treino');if(j)S=JSON.parse(j)}catch(e){}
+ norm();render();
+ try{
+  const [u,d]=await Promise.all([claude.use('user'),claude.use('db')]);
+  if(!u||!d)return;
+  ref=d.doc('data/users/'+await u.id()+'/treino');
+  const sn=await Promise.race([ref.get(),new Promise((_,r)=>setTimeout(r,10000))]);
+  if(sn.exists){S=JSON.parse(sn.data().s);norm();render()}else if(S.days.length)persist()
+ }catch(e){}
+}
+init();
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script></body></html>
