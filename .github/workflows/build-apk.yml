@@ -1,0 +1,60 @@
+name: Gerar APK Android
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Baixar o repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Configurar Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Preparar os arquivos do app
+        run: |
+          mkdir -p www
+          cp index.html manifest.json sw.js icon-192.png icon-512.png www/
+
+      - name: Instalar e configurar Capacitor
+        run: |
+          npm init -y
+          npm install @capacitor/core@^7 @capacitor/android@^7
+          npm install --save-dev @capacitor/cli@^7
+          cat > capacitor.config.json <<'EOF'
+          {
+            "appId": "com.fallgoh.treino",
+            "appName": "Meu Treino",
+            "webDir": "www"
+          }
+          EOF
+          npx cap add android
+          npx cap sync android
+
+      - name: Compilar APK de teste
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Disponibilizar o APK para download
+        uses: actions/upload-artifact@v4
+        with:
+          name: meu-treino-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
